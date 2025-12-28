@@ -1,0 +1,9 @@
+Model_Name | Citation
+GLADM35    | Cui et al., 2024
+REVEAL     | Thrastarson et al., 2024
+SEMUCBWM1  | French and Romanowicz, 2014 
+SPiRAL     | Simmons et al., 2021
+CAM2022    | Priestley et al., 2024
+TX2019SLAB     | Lu et al., 2019
+CF2024  | Chen & Forsyth, 2024
+Ye2022 | Ye et al., 2022
