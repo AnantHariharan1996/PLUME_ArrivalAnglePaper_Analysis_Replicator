@@ -20,7 +20,7 @@ LonGrid = [-162.5:0.3:-147.5];
 LatGrid = [12.5:0.3:27.5];
 [HLONGRD,HLATGRD] = meshgrid(LonGrid,LatGrid);
 %%%
-for Depth2Plot = [50 100 150] % [50:25:150];
+for Depth2Plot = [100] % [50:25:150];
 figure(101)
 
 for ModelNum = 1:8

@@ -1,0 +1,266 @@
+clear; clc; close all;
+
+Period = 50;
+DatFolder =     '/Users/ananthariharan/Documents/GitHub/PLUME_ArrivalAnglePaper_Analysis_Replicator/RawData/';
+PeriodDatFolder =[DatFolder num2str(Period) 's/'];
+flist = dir([PeriodDatFolder '*Slon_Slat_Stt_Evlon_Evlat_EvDep_EVID_*_AA_Lo_Hi_C_AAResid']);
+MegaAAList_Sta1 = [];
+MegaAAList_Sta2 = [];
+MegaHi_Err_AAList_Sta1 = [];
+MegaHi_Err_AAList_Sta2 = [];
+
+MegaLo_Err_AAList_Sta1 = [];
+MegaLo_Err_AAList_Sta2 = [];
+
+for fnum = 1:length(flist)
+
+
+    fname = [PeriodDatFolder flist(fnum).name];
+    Info = load(fname,'-ascii');
+    
+
+    NewEv1ID = extractBetween(fname,'50s/','Slon_Slat_Stt')
+    NewEv1ID=NewEv1ID{1}
+
+    Current_AA = Info(:,11);
+        Current_AA_abs = Info(:,7);
+
+    Current_AA_Low = Info(:,8)-Current_AA_abs;
+    Current_AA_Hi = Info(:,9)-Current_AA_abs;
+    Current_AA_C = Info(:,10);
+    Current_AA_Resid = Info(:,11);
+    Current_AA_ELAT= Info(:,5);
+    Current_AA_ELON= Info(:,4);
+    curr_ELON = Current_AA_ELON(1);
+    curr_ELAT = Current_AA_ELAT(1);
+    Current_AA_Slon = Info(:,1);
+    Current_AA_Slat = Info(:,2);
+
+    for num2 =  fnum:length(flist)
+    fname = [PeriodDatFolder flist(num2).name];
+
+    NewEv2ID = extractBetween(fname,'50s/','Slon_Slat_Stt')
+    NewEv2ID=NewEv2ID{1};
+    Info = load(fname,'-ascii');
+    
+
+    Current_AA_ELAT= Info(:,5);
+    Current_AA_ELON= Info(:,4);
+   second_ELON = Current_AA_ELON(1);
+  second_ELAT = Current_AA_ELAT(1);
+dists = distance(curr_ELAT,curr_ELON,second_ELAT,second_ELON);
+
+if dists > 0 & dists < 1
+
+
+Arrival_Angle_Store_1 = [];
+LowBound_Arrival_Angle_Store_1 = [];
+HighBound_Arrival_Angle_Store_1 = [];
+
+Arrival_Angle_Store_2 = [];
+LowBound_Arrival_Angle_Store_2 = [];
+HighBound_Arrival_Angle_Store_2= [];
+
+
+
+disp('This Might be a Doublet')
+   second_AA_C = Info(:,10);
+   second_AA_Slon = Info(:,1);
+   second_AA = Info(:,11);
+   second_AA_Slat = Info(:,2);
+second_AA_abs = Info(:,7);
+ second_AA_hi = Info(:,9)-second_AA_abs;
+   second_AA_lo = Info(:,8)-second_AA_abs;
+
+   % Get Matches
+
+   for ijklmn = 1:length(second_AA_Slon(:,1))
+tmpsta1lon  = second_AA_Slon(ijklmn);
+tmpsta1lat  = second_AA_Slat(ijklmn);
+curr_angle1 = second_AA(ijklmn);
+
+curr_angle1_lowbound = second_AA_lo(ijklmn);
+curr_angle1_hibound = second_AA_hi(ijklmn);
+
+
+
+match_checker = find(Current_AA_Slon == tmpsta1lon & ...
+    Current_AA_Slat == tmpsta1lat);
+
+if length(match_checker) > 0
+Arrival_Angle_Store_1 = [Arrival_Angle_Store_1 Current_AA(match_checker(1))];
+Arrival_Angle_Store_2 = [Arrival_Angle_Store_2 curr_angle1];
+
+
+% Record Error bounds on both angle estimates
+LowBound_Arrival_Angle_Store_1 = [LowBound_Arrival_Angle_Store_1 curr_angle1_lowbound];
+HighBound_Arrival_Angle_Store_1 = [HighBound_Arrival_Angle_Store_1 curr_angle1_hibound];
+
+LowBound_Arrival_Angle_Store_2 = [LowBound_Arrival_Angle_Store_2 Current_AA_Low(match_checker(1))];
+HighBound_Arrival_Angle_Store_2= [HighBound_Arrival_Angle_Store_2 Current_AA_Hi(match_checker(1))];
+
+
+
+end
+
+end
+
+% Viz the doublet here.
+nandx = find(isnan(Arrival_Angle_Store_1) == 1 | isnan(Arrival_Angle_Store_2) == 1)
+
+Arrival_Angle_Store_1(nandx) = [];
+Arrival_Angle_Store_2(nandx) =[];
+LowBound_Arrival_Angle_Store_1(nandx) = [];
+HighBound_Arrival_Angle_Store_1(nandx) = [];
+LowBound_Arrival_Angle_Store_2(nandx) = [];
+HighBound_Arrival_Angle_Store_2(nandx) = [];
+
+if length(Arrival_Angle_Store_2) > 15
+
+MegaAAList_Sta1 = [MegaAAList_Sta1 Arrival_Angle_Store_1];
+MegaAAList_Sta2 = [MegaAAList_Sta2 Arrival_Angle_Store_2];
+
+MegaHi_Err_AAList_Sta1 = [MegaHi_Err_AAList_Sta1 HighBound_Arrival_Angle_Store_1];
+MegaHi_Err_AAList_Sta2 = [MegaHi_Err_AAList_Sta2 HighBound_Arrival_Angle_Store_2];
+
+MegaLo_Err_AAList_Sta1 = [MegaLo_Err_AAList_Sta1 LowBound_Arrival_Angle_Store_1];
+MegaLo_Err_AAList_Sta2 = [MegaLo_Err_AAList_Sta2 LowBound_Arrival_Angle_Store_2];
+
+    % Do statistics here
+corrmatmat = corrcoef(Arrival_Angle_Store_1,Arrival_Angle_Store_2)
+CorrelationCoefficient = corrmatmat(1,2);
+Rsquare = CorrelationCoefficient*CorrelationCoefficient;
+
+Avg_Err = nanmean(abs(Arrival_Angle_Store_2-Arrival_Angle_Store_1));
+
+
+
+
+figure()
+load coastlines
+subplot(1,2,1)
+coastlon2 = wrapTo360(coastlon)
+plot(coastlon,coastlat,'linewidth',2,'color','k')
+hold on
+%scatter((PLUMESLONS),PLUMESLATS,20,[1 0 0],'filled','^','MarkerEdgeColor','k')
+hold on
+scatter(second_AA_Slon,second_AA_Slat,120,second_AA,'filled','MarkerEdgeColor','k','Linewidth',2)
+barbar=colorbar('Location','SouthOutside');
+ylabel(barbar,'Arrival Angle Deviation (degrees)','fontsize',20)
+colormap(turbo(50))
+caxis([-5 5])
+set(gca,'fontsize',18)
+
+
+
+% 
+% xlim([118.1079 248.3369])
+% ylim([-40 55.3827])
+box on
+set(gca,'linewidth',2,'XTickLabel',{},'YTickLabel',{})
+% xlim([189.7590 283.9529])
+% ylim([189.7590 283.9529])
+scatter((curr_ELON),curr_ELAT,300,[0 0 1],'filled','pentagram')
+hold on
+scatter((second_ELON),second_ELAT,300,[1 0 1],'filled','pentagram')
+
+ylim([-6.6829 36.3844])
+xlim([-170.6320 -74.0377])
+text((curr_ELON),curr_ELAT+2, NewEv2ID,'fontsize',20,'fontweight','bold','color',[1 0 0])
+text((second_ELON),second_ELAT-2, NewEv1ID,'fontsize',20,'fontweight','bold','color',[0 0 1])
+
+
+[trcklat1,trcklon1] = track2(mean(Current_AA_Slat),mean(Current_AA_Slon),curr_ELAT,curr_ELON);
+
+[trcklat2,trcklon2] = track2(mean(Current_AA_Slat),mean(Current_AA_Slon),second_ELAT,second_ELON);
+
+
+
+plot((trcklon1),trcklat1,'linewidth',2,'color',[1 0 0])
+plot((trcklon2),trcklat2,'linewidth',2,'color',[0 0 1],'linestyle','--')
+
+
+
+grid on; box on;
+
+
+title('Example of Event Doublet Recorded at PLUME','fontsize',18)
+subplot(1,2,2)
+scatter(Arrival_Angle_Store_1,Arrival_Angle_Store_2,200,[1 0 0],'filled','MarkerEdgeColor',[0.5 0.5 0.5],'LineWidth',2)
+hold on
+errorbar(Arrival_Angle_Store_1,Arrival_Angle_Store_2,...
+    LowBound_Arrival_Angle_Store_2,HighBound_Arrival_Angle_Store_2...
+    ,LowBound_Arrival_Angle_Store_1,HighBound_Arrival_Angle_Store_1,...
+    'LineWidth',2,'Color','r', 'LineStyle', 'none')
+
+
+plot([-5 5],[-5 5],'linewidth',2,'color','k','LineStyle','--')
+grid minor
+xlabelstr ={ ['Arrival Angle Deviations (Degrees):'],['Event ' NewEv1ID ]};
+ylabelstr ={ ['Arrival Angle Deviations (Degrees):'],['Event ' NewEv2ID ]};
+xlabel(xlabelstr)
+ylabel(ylabelstr)
+box on
+set(gca,'fontsize',18,'fontweight','bold','linewidth',2)
+grid on; 
+axis square
+xlim([-5 5])
+ylim([-5 5])
+text(1,-4,['R^2 = ' num2str(round(Rsquare,2))],'fontsize',19,'FontWeight','bold')
+%text(1,-4,{'Correlation Coeff.',['= ' num2str(round(CorrelationCoefficient,2)) ]},'fontsize',19,'FontWeight','bold')
+text(1,-2.75,{'Avg. Difference',['= ' num2str(round(Avg_Err,2)) '^\circ' ]},'fontsize',19,'FontWeight','bold')
+set(gcf,'position', [1 309 1161 477])
+end
+
+end
+
+    end
+end
+
+
+%%% 
+
+
+figure()
+plot([-5.5 5.5],[-5.5 5.5],'linewidth',2,'linestyle','--','color','k')
+
+hold on
+scatter(MegaAAList_Sta1,MegaAAList_Sta2,150,[1 0 0],'filled','MarkerEdgeColor','k','linewidth',1)
+
+errorbar(MegaAAList_Sta1,MegaAAList_Sta2,...
+    MegaLo_Err_AAList_Sta2,MegaHi_Err_AAList_Sta2...
+    ,MegaLo_Err_AAList_Sta1,MegaHi_Err_AAList_Sta1,...
+    'LineWidth',2,'Color','r', 'LineStyle', 'none')
+
+
+% MegaHi_Err_AAList_Sta1 = [MegaHi_Err_AAList_Sta1 HighBound_Arrival_Angle_Store_1];
+% MegaHi_Err_AAList_Sta2 = [MegaHi_Err_AAList_Sta2 HighBound_Arrival_Angle_Store_2];
+% 
+% MegaLo_Err_AAList_Sta1 = [MegaLo_Err_AAList_Sta1 LowBound_Arrival_Angle_Store_1];
+% MegaLo_Err_AAList_Sta2 = [MegaLo_Err_AAList_Sta2 LowBound_Arrival_Angle_Store_2];
+
+
+
+
+    % Do statistics here
+corrmatmat = corrcoef(MegaAAList_Sta1,MegaAAList_Sta2)
+CorrelationCoefficient = corrmatmat(1,2);
+Rsquare = CorrelationCoefficient*CorrelationCoefficient;
+
+Avg_Err = nanmean(abs(MegaAAList_Sta1-MegaAAList_Sta2));
+
+xlim([-5.5 5.5])
+ylim([-5.5 5.5])
+%text(1,-4,['R^2 = ' num2str(round(Rsquare,2))],'fontsize',19,'FontWeight','bold')
+text(2.3,-4,{'Correlation Coeff.',['= ' num2str(round(CorrelationCoefficient,2)) ]},'fontsize',22,'FontWeight','bold')
+text(2.3,-1.75,{'Avg. Difference',['= ' num2str(round(Avg_Err,2)) '^\circ' ]},'fontsize',22,'FontWeight','bold')
+set(gca,'fontsize',20,'fontweight','bold','linewidth',2)
+xlabel('Event 1: Arrival Angle Deviations (degrees)')
+ylabel('Event 2: Arrival Angle Deviations (degrees)')
+title('All Event Doublets at 50 s','fontsize',28)
+box on
+grid on; grid minor
+axis square
+hold on
+set(gcf,'Position',[104 28 1147 819])
+saveas(gcf,'Fig7.png')

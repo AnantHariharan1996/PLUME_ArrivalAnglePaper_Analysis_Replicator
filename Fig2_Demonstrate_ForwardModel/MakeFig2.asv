@@ -1,0 +1,162 @@
+% Note.
+% What this figure should show is three rows. One varying location.
+% One varying width. One varying time lag. 
+
+clear; clc; close all; 
+load coastlines
+Period=50;
+spacing = 0.3;
+[phvel]=prem_dispersion(1/Period);
+cglb = phvel;
+xlist = [-164:spacing/2:-152];
+ylist = [15:spacing/2:27];
+[Ref_XGrid,Ref_YGrid] = meshgrid(xlist,ylist);
+
+PLUMESTNS = readtable('PLUMESTNS.txt');
+PLUMESTNS_LONG = PLUMESTNS.Longitude;
+PLUMESTNS_LAT =  PLUMESTNS.Latitude;
+
+addpath(genpath('../Helper_Functions/'))
+EvLat = 2.3400
+EvLon=  159.6900
+scattererlat=20
+scattererlon=-157
+current_timelag =4
+current_width=100;
+ % 
+ % [delta2,xgrid,ygrid,ttime_field_perturbed,tau,ttime_field_noscatter,angle,angle_nodiff] ...
+ %    = Spedup_Get_Arrival_Angle_Residual_GaussianBeam(Period,EvLat,EvLon,...
+ %    scattererlat,scattererlon,current_timelag,current_width,Ref_YGrid(:),Ref_XGrid(:),cglb,spacing);
+
+  scattererlat_List = [scattererlat+2 scattererlat+2 scattererlat+2  ...
+      scattererlat+2  scattererlat+2  scattererlat+2 ...
+        scattererlat+2  scattererlat+2  scattererlat+2];
+scattererlon_List = [scattererlon scattererlon scattererlon ...
+    scattererlon scattererlon scattererlon...
+    scattererlon scattererlon scattererlon];
+current_timelag_List = [current_timelag current_timelag current_timelag ...
+    current_timelag current_timelag current_timelag...
+    current_timelag-2 current_timelag+1 current_timelag+4];
+current_width_List = [current_width current_width current_width ...
+    current_width-25 current_width+55 current_width+135 ...
+    current_width current_width current_width];
+EvLat_List = [EvLat EvLat 45 ...
+    45 45 45 ...
+    45 45 45];
+EvLon_List = [EvLon -120 -160 ...
+    -156 -156 -156 ...
+     -156 -156 -156];
+
+figh = figure(942)
+ax = subplot_custom_make([figh],3,3,[0.1],[0.1],[0.1 0.9],[0.1 0.9])
+
+for simnum=1:length(EvLon_List)
+simnum
+EvLat =EvLat_List(simnum);
+EvLon =EvLon_List(simnum);
+scattererlat =scattererlat_List(simnum);
+scattererlon=scattererlon_List(simnum);
+current_timelag=current_timelag_List(simnum);
+current_width=current_width_List(simnum);
+
+ [delta2,xgrid,ygrid,ttime_field_perturbed,tau,ttime_field_noscatter,angle,angle_nodiff] ...
+    = Spedup_Get_Arrival_Angle_Residual_GaussianBeam(Period,EvLat,EvLon,...
+    scattererlat,scattererlon,current_timelag,current_width,Ref_YGrid(:),Ref_XGrid(:),cglb,spacing);
+        
+currax = ax(simnum);
+interped_delta = griddata(xgrid,ygrid,delta2,Ref_XGrid,Ref_YGrid);
+contourf(currax,Ref_XGrid,Ref_YGrid,interped_delta,[-25:0.2:25],'EdgeColor','none')
+hold(currax,'on');
+box(currax,'on');
+set(currax,'linewidth',2,'XTickLabel',{},'YTickLabel',{},'fontsize',18)
+colormap(currax,flipud(turbo(100)))
+caxis(currax,[-6 6])
+
+
+    if simnum == 1
+        title(currax,{'Source-Diffractor Geometry'})
+    elseif simnum == 4
+        title(currax,'Diffractor Width')
+    elseif  simnum == 7
+        title(currax,'Diffractor Strength')
+    end
+
+
+
+%%%% Plot the diffractors @ scattererlon,scattererlat
+
+            [sourcelen,sourceaz] = distance(EvLat,EvLon,scattererlat,scattererlon);
+perpaz = sourceaz-90;
+
+     [scatlatend,scatlonend] = reckon(scattererlat,scattererlon,2*km2deg(current_width),perpaz);
+     [scatlatstart,scatlonstart] = reckon(scattererlat,scattererlon,2*km2deg(current_width),perpaz+180);
+plot(currax,[scatlonstart scatlonend],[scatlatstart scatlatend],'linewidth',4,'Color','c','MarkerEdgeColor','k')
+plot(currax,coastlon,coastlat,'color',[0.5 0.5 0.5],'LineWidth',2)
+xlim(currax,[min(Ref_XGrid(:)) max(Ref_XGrid(:))])
+ylim(currax,[min(Ref_YGrid(:)) max(Ref_YGrid(:))])
+
+scatter(currax,PLUMESTNS_LONG,PLUMESTNS_LAT,50,[1 0 1],'^','MarkerEdgeColor','magenta','LineWidth',1)
+
+
+
+
+
+
+if simnum==1
+text(currax,-163.5,17,{'Long_{E}: '  num2str(EvLon) '^\circ']},'fontsize',17,'fontweight','bold','color','magenta')
+text(currax,-163.5,20,{'Lat_{E}: ' [ num2str(EvLat) '^\circ']},'fontsize',17,'fontweight','bold','color','magenta')
+end
+
+if simnum==2
+text(currax,-163.5,17,{'Long_{E}: ' [ num2str(EvLon) '^\circ']},'fontsize',17,'fontweight','bold','color','magenta')
+text(currax,-163.5,20,{'Lat_E: ' [ num2str(EvLat) '^\circ']},'fontsize',17,'fontweight','bold','color','magenta')
+end
+
+if simnum==3
+text(currax,-163.5,17,{'Long_E: ' [ num2str(EvLon) '^\circ']},'fontsize',17,'fontweight','bold','color','magenta')
+text(currax,-163.5,20,{'Lat_E: ' [ num2str(EvLat) '^\circ']},'fontsize',17,'fontweight','bold','color','magenta')
+end
+
+
+if simnum==4
+text(currax,-163.5,24.25,{'Width:',[ num2str(2*current_width) ' km']},'fontsize',17,'fontweight','bold','color','magenta')
+end
+
+if simnum==5
+text(currax,-163.5,24.25,{'Width:',[ num2str(2*current_width) ' km']},'fontsize',17,'fontweight','bold','color','magenta')
+end
+
+if simnum==6
+text(currax,-163.5,24.25,{'Width:',[ num2str(2*current_width) ' km']},'fontsize',17,'fontweight','bold','color','magenta')
+end
+
+if simnum==7
+text(currax,-163.5,24.25,{'\tau_{max}: ', [num2str(current_timelag) ' s']},'fontsize',17,'fontweight','bold','color','magenta')
+end
+
+if simnum==8
+text(currax,-163.5,24.25,{'\tau_{max}: ', [num2str(current_timelag) ' s']},'fontsize',17,'fontweight','bold','color','magenta')
+end
+
+if simnum==9
+text(currax,-163.5,24.25,{'\tau_{max}: ', [num2str(current_timelag) ' s']},'fontsize',17,'fontweight','bold','color','magenta')
+end
+
+% Now, coup
+
+
+IntermediatePt = track2(EvLat,EvLon,scattererlat,scattererlon,100);
+IntermediatePts2Use = IntermediatePt(70,:);
+
+quiver(currax,IntermediatePts2Use(2),IntermediatePts2Use(1),scattererlon-(IntermediatePts2Use(2)),scattererlat-IntermediatePts2Use(1),'linewidth',4,'MaxHeadSize',0.2,'color','blue')
+
+plot(currax,coastlon,coastlat,'color',[0.5 0.5 0.5],'LineWidth',2)
+
+end
+
+%colormap(currax,flipud(turbo(25)))
+barbar=colorbar(currax,'location','southoutside')
+barbar.Position = [0.125 0.07 0.75 0.0157]
+ylabel(barbar,'Arrival Angle Deviation (degrees)','FontSize',18,'fontweight','bold')
+set(gcf,'position',[67 31 876 759])
+saveas(gcf,'Fig2.png')
