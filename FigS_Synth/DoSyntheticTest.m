@@ -1,0 +1,316 @@
+% Synthetic Test. 
+clear; clc; close all; 
+cd(    '/Users/ananthariharan/Documents/GitHub/PLUME_ArrivalAnglePaper_Analysis_Replicator/FigS_Synth')
+addpath('../Helper_Functions/')
+load coastlines
+% Step 1: Define 'true' diffractor parameters. Make a plot showing this. 
+True_Scatterer_Lon = [-158];
+True_Scatterer_Lat= [18];
+True_Scatterer_Width = [400];
+True_Scatterer_Tau = [10];
+Period=50;
+[phvel]=prem_dispersion(1/Period);
+cglb = phvel;
+spacing=0.25;
+lambda = Period*cglb;
+NoiseFac=1;
+RawDatFolder =['/Users/ananthariharan/Documents/GitHub/PLUME_ArrivalAnglePaper_Analysis_Replicator/RawData/' num2str(Period) 's/'];
+Event_Files=  dir([RawDatFolder '*Slon_Slat_Stt_Evlon_Evlat_EvDep_EVID_*_AA_Lo_Hi_C_AAResid']);
+% Predictions_List = dir([Stora ...
+%     gefolder 'ModelSpaceSearch_Store_EVID*'])
+PredictionsFolder = [    '/Users/ananthariharan/Documents/GitHub/PLUME_ArrivalAnglePaper_Analysis_Replicator/Stored_ModelSpacePredictions/' num2str(Period) 's/']
+
+for EventNum = 1:length(Event_Files)
+disp(['Event: ' num2str(EventNum)])
+    % Step 2: For every earthquake in the dataset, run the forward modeling
+% code and generate 'observations' 
+% AT THE LOCATIONS WHERE WE HAVE OUR OBSERVATIONS
+
+currfname=Event_Files(EventNum).name;
+current_full_fname = [RawDatFolder currfname];
+
+    % Load RawDatInfo 
+Info = load(current_full_fname,'-ascii');
+    Current_AA = Info(:,11);
+        Current_AA_abs = Info(:,7);
+
+    Current_AA_Low = Info(:,8)-Current_AA_abs;
+    Current_AA_Hi = Info(:,9)-Current_AA_abs;
+    Current_AA_C = Info(:,10);
+    Current_AA_Resid = Info(:,11);
+    Current_AA_ELAT= Info(:,5);
+    Current_AA_ELON= Info(:,4);
+    EvLon = Current_AA_ELON(1);
+    EvLat = Current_AA_ELAT(1);
+    Current_AA_Slon = Info(:,1);
+    Current_AA_Slat = Info(:,2);
+    Current_AA_Unct = Current_AA_Hi-Current_AA_Low;
+    Current_AA_Wt = 1./Current_AA_Unct;
+
+    % Generate the Grid used for the predictions
+         Ref_XGrid = min(Current_AA_Slon)-0.25:spacing:max(Current_AA_Slon)+0.25;
+         Ref_YGrid = min(Current_AA_Slat)-0.25:spacing:max(Current_AA_Slat)+0.25;
+          [Ref_XGrid,Ref_YGrid] = meshgrid(Ref_XGrid,Ref_YGrid);
+
+
+
+    % Get EVID
+    EVID = extractBetween(currfname,'EVID_','_AA_Lo_Hi');
+    EVID=EVID{1};
+
+    %
+[delta,xgrid,ygrid,ttime_field_perturbed,tau,ttime_field_noscatter,angle,angle_nodiff] ...
+    = Spedup_Get_Arrival_Angle_Residual_GaussianBeam(Period, EvLat,...
+    EvLon, True_Scatterer_Lat,True_Scatterer_Lon,True_Scatterer_Tau,True_Scatterer_Width,...
+    Ref_YGrid(:),Ref_XGrid(:),cglb,spacing);
+
+
+
+        InterpedAAsOnObs = griddata(xgrid,ygrid,delta,Current_AA_Slon,Current_AA_Slat);
+        Noise = rand(size(InterpedAAsOnObs))-0.5;
+        InterpedAAsOnObs = InterpedAAsOnObs+NoiseFac.*Noise;
+        Interped_AAs = griddata(xgrid,ygrid,delta,Ref_XGrid,Ref_YGrid);
+
+  % Step 3: Loop over EVERY model parameter for this observation and
+    % calculate the misfit
+
+        Predictions_Name =[PredictionsFolder 'ModelSpaceSearch_Store_EVID'  EVID '.mat'];
+
+
+          load(Predictions_Name)
+
+            Lonstore = Output_Store.Lonstore;
+          Latstore = Output_Store.Latstore;
+          Widthstore = Output_Store.Widthstore;
+          Taustore = Output_Store.Taustore;
+
+X_GridForGeogMisfitSurface = [min(Lonstore)-0.5:0.2:max(Lonstore)+0.5];
+Y_GridForGeogMisfitSurface = [min(Latstore)-0.5:0.2:max(Latstore)+0.5];
+[XXGRD,YYGRD] = meshgrid(X_GridForGeogMisfitSurface,Y_GridForGeogMisfitSurface);
+
+    L1_MisfitStore = 999999.*ones(size(Taustore)); 
+           L2_MisfitStore = L1_MisfitStore;
+           Var_Reduc_List = L1_MisfitStore;
+
+          for modelspace_num = 1:length(Taustore)
+                
+                current_predictions = Output_Store.ModelSpaceSearch_Store(modelspace_num,:);
+                % Get misfit between 'observations' and predictions
+                 Interped_AA_PREDICTIONS = griddata(Output_Store.xgrid,Output_Store.ygrid,current_predictions,...
+                      Current_AA_Slon,Current_AA_Slat);
+
+                Difference = InterpedAAsOnObs-Interped_AA_PREDICTIONS;
+                Mean_L1Misfit = nanmean(abs(Difference)); % currently unweighted (but still avg) misfit
+                Mean_L2Misfit = nanmean(abs(Difference.^2)); % currently unweighted (but still avg) misfit
+
+                AbsDiff = abs(Difference); absDiffsquared = abs(Difference.^2);
+
+              WmeanL1  = nansum(AbsDiff.*Current_AA_Wt)./nansum(Current_AA_Wt);
+                WmeanL2  = nansum(absDiffsquared.*Current_AA_Wt)./nansum(Current_AA_Wt);
+
+                
+                L1_MisfitStore_Weighted(modelspace_num) = WmeanL1;
+                L2_MisfitStore_Weighted(modelspace_num)= WmeanL2;
+
+                L1_MisfitStore(modelspace_num) = Mean_L1Misfit;
+                L2_MisfitStore(modelspace_num) = Mean_L2Misfit;
+
+          end
+
+          StoreAllMisfits_L1(:,EventNum) = L1_MisfitStore;
+          StoreAllMisfits_L2(:,EventNum) = L2_MisfitStore;
+          
+
+         StoreAllMisfits_L1_Weighted(:,EventNum) = L1_MisfitStore_Weighted;
+         StoreAllMisfits_L2_Weighted(:,EventNum) = L2_MisfitStore_Weighted;
+
+
+end
+
+
+%%%%%%%%% Now stack the error surfaces and visualize the result, while
+%%%%%%%%% also showing the -true- value! 
+
+
+
+% Build EVIDLIST
+
+for EventNum = 1:length(Event_Files)
+disp(['Event: ' num2str(EventNum)])
+    % Step 2: For every earthquake in the dataset, run the forward modeling
+% code and generate 'observations' 
+% AT THE LOCATIONS WHERE WE HAVE OUR OBSERVATIONS
+
+currfname=Event_Files(EventNum).name;
+current_full_fname = [RawDatFolder currfname];
+
+    % Load RawDatInfo 
+Info = load(current_full_fname,'-ascii');
+    Current_AA = Info(:,11);
+        Current_AA_abs = Info(:,7);
+
+    Current_AA_Low = Info(:,8)-Current_AA_abs;
+    Current_AA_Hi = Info(:,9)-Current_AA_abs;
+    Current_AA_C = Info(:,10);
+    Current_AA_Resid = Info(:,11);
+    Current_AA_ELAT= Info(:,5);
+    Current_AA_ELON= Info(:,4);
+    EvLon = Current_AA_ELON(1);
+    EvLat = Current_AA_ELAT(1);
+    Current_AA_Slon = Info(:,1);
+    Current_AA_Slat = Info(:,2);
+    Current_AA_Unct = Current_AA_Hi-Current_AA_Low;
+    Current_AA_Wt = 1./Current_AA_Unct;
+
+    % Generate the Grid used for the predictions
+         Ref_XGrid = min(Current_AA_Slon)-0.25:spacing:max(Current_AA_Slon)+0.25;
+         Ref_YGrid = min(Current_AA_Slat)-0.25:spacing:max(Current_AA_Slat)+0.25;
+          [Ref_XGrid,Ref_YGrid] = meshgrid(Ref_XGrid,Ref_YGrid);
+
+
+
+    % Get EVID
+    EVID = extractBetween(currfname,'EVID_','_AA_Lo_Hi');
+    EVID=EVID{1};
+
+
+EVIDLIST{EventNum} = EVID;
+    ELONlist(EventNum) = EvLon;
+    ELATlist(EventNum) = EvLat;
+
+
+end
+
+
+scattererlat=20
+scattererlon=-157
+
+
+[alen_forstack,az_forstck] = distance(ELATlist,ELONlist,scattererlat,scattererlon);
+
+ [WtList] = Get_Az_Weights_45DegBin(az_forstck);
+
+
+       Surf2Plt =  (StoreAllMisfits_L2.*WtList);
+        
+Surf2Plt= nansum(Surf2Plt')/(sum(WtList)*length(WtList))
+
+      [minval,mindx] = min(Surf2Plt);
+
+
+
+
+run('../ParameterSetup.m')
+
+   Lonstore = Ngrid_X;
+Latstore=  Ngrid_Y;
+Widthstore= Ngrid_L;
+ Taustore= Ngrid_Tau;
+
+     % get the model params corresponding to this misfit 
+    BestLon = Lonstore(mindx) 
+    BestLat = Latstore(mindx)
+    BestWidth = Widthstore(mindx); BestTau = Taustore(mindx);
+    
+
+    VaryingWidth_Indices = find(Lonstore == BestLon & ...
+        Taustore == BestTau & Latstore == BestLat);
+    VaryingWidths_BestSection = Widthstore(VaryingWidth_Indices);
+
+
+    VaryingTau_Indices =  find(Lonstore == BestLon & ...
+        Widthstore == BestWidth & Latstore == BestLat);
+    VaryingTaus_BestSection = Taustore(VaryingTau_Indices);
+
+
+        % Get the 'surfaces' corresponding to this misfit
+    VaryingLonLat_Indices = find(Widthstore == BestWidth & ...
+        Taustore == BestTau);
+    VaryingLons_BestSection = Lonstore(VaryingLonLat_Indices);
+    VaryingLats_BestSection = Latstore(VaryingLonLat_Indices);
+    MisfitVaryingPos= Surf2Plt(VaryingLonLat_Indices);
+     MisfitVaryingTaus = Surf2Plt(VaryingTau_Indices);
+     MisfitVaryingWidths = Surf2Plt(VaryingWidth_Indices);
+
+     %%%%%
+
+
+ X_GridForGeogMisfitSurface = [min(Lonstore)-0.5:0.2:max(Lonstore)+0.5];
+Y_GridForGeogMisfitSurface = [min(Latstore)-0.5:0.2:max(Latstore)+0.5];
+[XXGRD,YYGRD] = meshgrid(X_GridForGeogMisfitSurface,Y_GridForGeogMisfitSurface);
+MisfitVaryingPos_gridded = griddata(VaryingLons_BestSection,VaryingLats_BestSection,MisfitVaryingPos,XXGRD,YYGRD);
+
+
+
+% Get ensemble of best-fitting models.
+
+ [misfit_threshold] = GetMisfitThreshold_FunctionVer(39,4,minval,99)
+
+ idx  = find(Surf2Plt < misfit_threshold)
+
+%% Plot summary Figure
+
+
+figure()
+figure(9000+Period)
+subplot(1,3,1)
+plot(coastlon,coastlat,'linewidth',3,'color','k')
+    hold on
+[m,p1]=contourf(XXGRD,YYGRD,MisfitVaryingPos_gridded,50,'edgecolor','none');
+barbar=colorbar('location','westoutside');
+ylabel(barbar,'L2 Misfit')
+box on
+plot(coastlon,coastlat,'linewidth',3,'color','k')
+
+set(gca,'fontsize',18,'fontweight','bold','linewidth',2)
+title({'Misfit Surface: Varying Position',['\tau_{max} = ' num2str(BestTau), 's, Width = ' num2str(BestWidth) ' km']})
+   ylim([14 26])
+  
+
+   xlim([-165 -150])
+Cmap2Use= '/Users/ananthariharan/Documents/GitHub/ArrivalAngle_Hawaii_Imaging/UsefulFunctions/roma.cpt';  
+
+ cptcmap(Cmap2Use,'ncol',20);
+p2= scatter(True_Scatterer_Lon,True_Scatterer_Lat,500,[1 0 1],'x','linewidth',5);
+%legend([p1 p2],'Misfit Slice','True Location')
+% True_Scatterer_Lon = [-160];
+% True_Scatterer_Lat= [20];
+subplot(1,3,2)
+
+    p3=plot(VaryingTaus_BestSection,MisfitVaryingTaus,'linewidth',2)
+    ylabel('L2 Misfit')
+
+xlabel('\tau (s)')
+    ylabel('L2 Misfit')
+    box on
+    hold on
+set(gca,'fontsize',18,'fontweight','bold','linewidth',2)
+xlim([0 25])
+plot([BestTau BestTau],[0 1000],'linestyle','--','Color','r','linewidth',2)
+%ylim([0 1000])
+legend('Misfit Surface','True Value')
+    title('Misfit Surface: Varying \tau_{max}')
+ylim([0 1])
+
+    subplot(1,3,3)
+
+    p3=plot(VaryingWidths_BestSection,MisfitVaryingWidths,'linewidth',2)
+    ylabel('L2 Misfit')
+
+xlabel('Width (km)')
+    ylabel('L2 Misfit')
+    box on
+    hold on
+set(gca,'fontsize',18,'fontweight','bold','linewidth',2)
+xlim([ min(MisfitVaryingWidths) max(MisfitVaryingWidths)])
+plot([BestWidth BestWidth],[0 1000],'linestyle','--','Color','r','linewidth',2)
+
+xlim([50 600])
+legend('Misfit Surface','True Value')
+    title('Misfit Surface: Varying Width')
+
+set(gcf,'position', [-61 440 1322 349])
+ylim([0 1])
+
+
+saveas(gcf,['SynthTest' num2str(True_Scatterer_Lon) num2str(True_Scatterer_Lat) num2str(True_Scatterer_Width) num2str(True_Scatterer_Tau) '.png'])

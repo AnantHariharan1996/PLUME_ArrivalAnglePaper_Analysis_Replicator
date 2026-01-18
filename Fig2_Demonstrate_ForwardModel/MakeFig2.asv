@@ -23,10 +23,7 @@ scattererlat=20
 scattererlon=-157
 current_timelag =4
 current_width=100;
- % 
- % [delta2,xgrid,ygrid,ttime_field_perturbed,tau,ttime_field_noscatter,angle,angle_nodiff] ...
- %    = Spedup_Get_Arrival_Angle_Residual_GaussianBeam(Period,EvLat,EvLon,...
- %    scattererlat,scattererlon,current_timelag,current_width,Ref_YGrid(:),Ref_XGrid(:),cglb,spacing);
+
 
   scattererlat_List = [scattererlat+2 scattererlat+2 scattererlat+2  ...
       scattererlat+2  scattererlat+2  scattererlat+2 ...
@@ -103,43 +100,43 @@ scatter(currax,PLUMESTNS_LONG,PLUMESTNS_LAT,50,[1 0 1],'^','MarkerEdgeColor','ma
 
 
 if simnum==1
-text(currax,-163.5,17,{'Long_{E}: '  num2str(EvLon) '^\circ']},'fontsize',17,'fontweight','bold','color','magenta')
-text(currax,-163.5,20,{'Lat_{E}: ' [ num2str(EvLat) '^\circ']},'fontsize',17,'fontweight','bold','color','magenta')
+text(currax,-163.5,24.5,{'Long_{E}:', [num2str(EvLon) '^\circ']},'fontsize',17,'fontweight','bold','color','magenta')
+text(currax,-163.5,18,{'Lat_{E}:', [num2str(EvLat) '^\circ']},'fontsize',17,'fontweight','bold','color','magenta')
 end
 
 if simnum==2
-text(currax,-163.5,17,{'Long_{E}: ' [ num2str(EvLon) '^\circ']},'fontsize',17,'fontweight','bold','color','magenta')
-text(currax,-163.5,20,{'Lat_E: ' [ num2str(EvLat) '^\circ']},'fontsize',17,'fontweight','bold','color','magenta')
+text(currax,-163.5,24.5,{'Long_{E}:', [num2str(EvLon) '^\circ']},'fontsize',17,'fontweight','bold','color','magenta')
+text(currax,-163.5,18,{'Lat_E:', [num2str(EvLat) '^\circ']},'fontsize',17,'fontweight','bold','color','magenta')
 end
 
 if simnum==3
-text(currax,-163.5,17,{'Long_E: ' [ num2str(EvLon) '^\circ']},'fontsize',17,'fontweight','bold','color','magenta')
-text(currax,-163.5,20,{'Lat_E: ' [ num2str(EvLat) '^\circ']},'fontsize',17,'fontweight','bold','color','magenta')
+text(currax,-163.5,24.5,{'Long_E:',[ num2str(EvLon) '^\circ']},'fontsize',17,'fontweight','bold','color','magenta')
+text(currax,-163.5,18,{'Lat_E:', [ num2str(EvLat) '^\circ']},'fontsize',17,'fontweight','bold','color','magenta')
 end
 
 
 if simnum==4
-text(currax,-163.5,24.25,{'Width:',[ num2str(2*current_width) ' km']},'fontsize',17,'fontweight','bold','color','magenta')
+text(currax,-163.5,24.5,{'Width:',[ num2str(2*current_width) ' km']},'fontsize',17,'fontweight','bold','color','magenta')
 end
 
 if simnum==5
-text(currax,-163.5,24.25,{'Width:',[ num2str(2*current_width) ' km']},'fontsize',17,'fontweight','bold','color','magenta')
+text(currax,-163.5,24.5,{'Width:',[ num2str(2*current_width) ' km']},'fontsize',17,'fontweight','bold','color','magenta')
 end
 
 if simnum==6
-text(currax,-163.5,24.25,{'Width:',[ num2str(2*current_width) ' km']},'fontsize',17,'fontweight','bold','color','magenta')
+text(currax,-163.5,24.5,{'Width:',[ num2str(2*current_width) ' km']},'fontsize',17,'fontweight','bold','color','magenta')
 end
 
 if simnum==7
-text(currax,-163.5,24.25,{'\tau_{max}: ', [num2str(current_timelag) ' s']},'fontsize',17,'fontweight','bold','color','magenta')
+text(currax,-163.5,24.5,{'\tau_{max}: ', [num2str(current_timelag) ' s']},'fontsize',17,'fontweight','bold','color','magenta')
 end
 
 if simnum==8
-text(currax,-163.5,24.25,{'\tau_{max}: ', [num2str(current_timelag) ' s']},'fontsize',17,'fontweight','bold','color','magenta')
+text(currax,-163.5,24.5,{'\tau_{max}: ', [num2str(current_timelag) ' s']},'fontsize',17,'fontweight','bold','color','magenta')
 end
 
 if simnum==9
-text(currax,-163.5,24.25,{'\tau_{max}: ', [num2str(current_timelag) ' s']},'fontsize',17,'fontweight','bold','color','magenta')
+text(currax,-163.5,24.5,{'\tau_{max}: ', [num2str(current_timelag) ' s']},'fontsize',17,'fontweight','bold','color','magenta')
 end
 
 % Now, coup

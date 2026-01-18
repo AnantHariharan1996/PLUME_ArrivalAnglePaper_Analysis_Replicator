@@ -1,0 +1,238 @@
+
+% Stack the error surfaces. 
+
+clear; clc; close all;
+cd(    '/Users/ananthariharan/Documents/GitHub/PLUME_ArrivalAnglePaper_Analysis_Replicator/Fig10_Stack_ErrorSurfaces')
+load coastlines
+addpath(genpath('/Users/ananthariharan/Documents/GitHub/PLUME_ArrivalAnglePaper_Analysis_Replicator/Helper_Functions'))
+addpath(genpath(pwd))
+Cmap2Use= '/Users/ananthariharan/Documents/GitHub/ArrivalAngle_Hawaii_Imaging/UsefulFunctions/lajolla.cpt';  
+
+% What is the purpose of this script? To demonstrate successful stacked inversions
+% at a period.
+
+scattererlat=20
+scattererlon=-157
+
+Period=50;
+[phvel]=prem_dispersion(1/Period);
+cglb = phvel;
+
+
+RawDataFolder =     '/Users/ananthariharan/Documents/GitHub/PLUME_ArrivalAnglePaper_Analysis_Replicator/RawData/';
+  RawDataFolderatPeriod = [RawDataFolder  num2str(Period) 's/'];
+MisfitSurfaceFolder = ['/Users/ananthariharan/Documents/GitHub/PLUME_ArrivalAnglePaper_Analysis_Replicator/SummaryMisfitStore/'];
+MisfitSurfaceFname = [MisfitSurfaceFolder 'MisfitSurfaces_' num2str(Period) 's'];
+
+run('../ParameterSetup.m')
+addpath(genpath('../Helper_Functions/'))
+load(MisfitSurfaceFname)
+
+    Current_Misfit_Manifold_L2_Wt = MisfitSurfaceSummary.StoreAllMisfits_L2_Weighted;
+    Current_Misfit_Manifold_L1_Wt = MisfitSurfaceSummary.StoreAllMisfits_L1_Weighted;
+    Current_Misfit_Manifold_L2_SUM = MisfitSurfaceSummary.StoreAllMisfits_L2_SUM;
+    Current_Misfit_Manifold_L1 = MisfitSurfaceSummary.StoreAllMisfits_L1;
+    Current_Misfit_Manifold_L2 = MisfitSurfaceSummary.StoreAllMisfits_L2;
+    Current_VR_Wt = MisfitSurfaceSummary.StoreAllVarReduc_Wt;
+    Current_VR = MisfitSurfaceSummary.StoreAllVarReduc;
+
+
+    Sum_Misfit_L2Wt = nansum(Current_Misfit_Manifold_L2_Wt');
+        Sum_Misfit_L1Wt = nansum(Current_Misfit_Manifold_L1_Wt');
+        Sum_Misfit_Manifold_L2sum = nansum(Current_Misfit_Manifold_L2_SUM');
+        Sum_Misfit_L1 = nansum(Current_Misfit_Manifold_L1');
+        Sum_Misfit_L2 = nansum(Current_Misfit_Manifold_L2');
+        Sum_VRWt = nansum(Current_VR_Wt');
+        Sum_VR = nansum(Current_VR');
+
+EVIDLIST=MisfitSurfaceSummary.EVIDLIST;
+% Construct Weights based on Backazimuth. First, loop over all events
+
+for evnum =1:length(EVIDLIST)
+    
+currid=EVIDLIST{evnum};
+currfdir = dir([RawDataFolderatPeriod '*EVID_' currid '_AA*']);
+if length(currfdir) ~= 1
+    error('??')
+end
+
+currfname = currfdir(1).name;
+Info  = load([RawDataFolderatPeriod currfname],'-ascii')
+
+ Current_AA = Info(:,11);
+        Current_AA_abs = Info(:,7);
+
+    Current_AA_Low = Info(:,8)-Current_AA_abs;
+    Current_AA_Hi = Info(:,9)-Current_AA_abs;
+    Current_AA_C = Info(:,10);
+    Current_AA_Resid = Info(:,11);
+    Current_AA_ELAT= Info(:,5);
+    Current_AA_ELON= Info(:,4);
+    ELONlist(evnum) = Current_AA_ELON(1);
+    ELATlist(evnum) = Current_AA_ELAT(1);
+    Current_AA_Slon = Info(:,1);
+    Current_AA_Slat = Info(:,2);
+
+    
+end
+
+[alen_forstack,az_forstck] = distance(ELATlist,ELONlist,scattererlat,scattererlon);
+
+ [WtList] = Get_Az_Weights_45DegBin(az_forstck);
+
+
+
+
+
+     Current_Misfit_Manifold_L2_Wt = MisfitSurfaceSummary.StoreAllMisfits_L2_Weighted;
+    Current_Misfit_Manifold_L1_Wt = MisfitSurfaceSummary.StoreAllMisfits_L1_Weighted;
+    Current_Misfit_Manifold_L2_SUM = MisfitSurfaceSummary.StoreAllMisfits_L2_SUM;
+    Current_Misfit_Manifold_L1 = MisfitSurfaceSummary.StoreAllMisfits_L1;
+    Current_Misfit_Manifold_L2 = MisfitSurfaceSummary.StoreAllMisfits_L2;
+    Current_VR_Wt = MisfitSurfaceSummary.StoreAllVarReduc_Wt;
+    Current_VR = MisfitSurfaceSummary.StoreAllVarReduc;
+
+
+
+        Surf2Plt =  Current_Misfit_Manifold_L2.*WtList;
+        
+Surf2Plt= nansum(Surf2Plt')
+
+           [minval,mindx] = min(Surf2Plt);
+
+
+    Lonstore = Ngrid_X;
+Latstore=  Ngrid_Y;
+Widthstore= Ngrid_L;
+ Taustore= Ngrid_Tau;
+
+     % get the model params corresponding to this misfit 
+    BestLon = Lonstore(mindx) 
+    BestLat = Latstore(mindx)
+    BestWidth = Widthstore(mindx); BestTau = Taustore(mindx);
+    
+
+    VaryingWidth_Indices = find(Lonstore == BestLon & ...
+        Taustore == BestTau & Latstore == BestLat);
+    VaryingWidths_BestSection = Widthstore(VaryingWidth_Indices);
+
+
+    VaryingTau_Indices =  find(Lonstore == BestLon & ...
+        Widthstore == BestWidth & Latstore == BestLat);
+    VaryingTaus_BestSection = Taustore(VaryingTau_Indices);
+
+
+        % Get the 'surfaces' corresponding to this misfit
+    VaryingLonLat_Indices = find(Widthstore == BestWidth & ...
+        Taustore == BestTau);
+    VaryingLons_BestSection = Lonstore(VaryingLonLat_Indices);
+    VaryingLats_BestSection = Latstore(VaryingLonLat_Indices);
+    MisfitVaryingPos= Surf2Plt(VaryingLonLat_Indices);
+     MisfitVaryingTaus = Surf2Plt(VaryingTau_Indices);
+     MisfitVaryingWidths = Surf2Plt(VaryingWidth_Indices);
+
+     %%%%%
+
+
+ X_GridForGeogMisfitSurface = [min(Lonstore)-0.5:0.2:max(Lonstore)+0.5];
+Y_GridForGeogMisfitSurface = [min(Latstore)-0.5:0.2:max(Latstore)+0.5];
+[XXGRD,YYGRD] = meshgrid(X_GridForGeogMisfitSurface,Y_GridForGeogMisfitSurface);
+MisfitVaryingPos_gridded = griddata(VaryingLons_BestSection,VaryingLats_BestSection,MisfitVaryingPos,XXGRD,YYGRD);
+
+
+    % Get ensemble of best-fitting models.
+
+ [misfit_threshold] = GetMisfitThreshold_FunctionVer(39,3,minval,90)
+
+ idx  = find(Surf2Plt < misfit_threshold)
+
+      % get the model params corresponding to this misfit 
+GoodLon= Lonstore(idx) 
+GoodLat = Latstore(idx)
+GoodWidth = Widthstore(idx); 
+GoodTau = Taustore(idx);
+
+
+
+
+figure()
+subplot(1,3,1)
+contourf(XXGRD,YYGRD,MisfitVaryingPos_gridded,500,'EdgeColor','none')
+hold on
+plot(coastlon,coastlat,'linewidth',2,'Color','k')
+   ylim([14 26])
+  
+
+   xlim([-165 -150])
+   colorbar
+   set(gca,'FontSize',18,'FontWeight','bold','LineWidth',2)
+axis square
+ cptcmap( Cmap2Use,'ncol',50,'flip',true);
+ set(gcf,'position',[476 1 1037 779])
+
+title({'Misfit Surface: Varying Position',['\tau_{max} = ' num2str(BestTau), 's, Width = ' num2str(BestWidth) ' km']})
+
+subplot(1,3,2)
+
+   p3=plot(VaryingTaus_BestSection,MisfitVaryingTaus,'linewidth',2)
+    ylabel('L2 Misfit')
+
+xlabel('\tau (s)')
+    ylabel('L2 Misfit')
+    box on
+    hold on
+set(gca,'fontsize',18,'fontweight','bold','linewidth',2)
+xlim([0 25])
+plot([BestTau BestTau],[0 1000],'linestyle','--','Color','r','linewidth',2)
+%ylim([0 1000])
+%    title('Misfit Surface: Varying \tau_{max}')
+xlim([0 15])
+ylim([1 100])
+
+
+yyaxis right
+
+histogram(GoodTau)
+
+yyaxis left
+
+text(6.5,104,'\delta c/ c_0 (%)','fontweight','bold','fontsize',18)
+
+[newc,dcc] = Getdcoverc(10,2*BestWidth,cglb)
+text(9,95,num2str(round(dcc,2)),'fontweight','bold','fontsize',18)
+
+[newc,dcc] = Getdcoverc(5,2*BestWidth,cglb)
+text(4,95,num2str(round(dcc,2)),'fontweight','bold','fontsize',18)
+
+
+
+
+subplot(1,3,3)
+yyaxis left
+
+    p3=plot(VaryingWidths_BestSection,MisfitVaryingWidths,'linewidth',2)
+    ylabel('L2 Misfit')
+
+xlabel('Width (km)')
+    ylabel('L2 Misfit')
+    box on
+    hold on
+set(gca,'fontsize',18,'fontweight','bold','linewidth',2)
+xlim([ min(MisfitVaryingWidths) max(MisfitVaryingWidths)])
+plot([BestWidth BestWidth],[0 1000],'linestyle','--','Color','r','linewidth',2)
+xlim([30 600])
+ylim([0 100])
+
+yyaxis right
+
+histogram(GoodWidth)
+
+legend('Misfit Surface','Best Model','Acceptable Models')
+    title('Misfit Surface: Varying Width')
+
+    set(gcf,'position', [1553 416 1748 422])
+
+
+
+
+saveas(gcf,'FinalInversionFig.png')

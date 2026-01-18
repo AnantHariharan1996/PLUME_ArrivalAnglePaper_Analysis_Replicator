@@ -4,13 +4,13 @@
 
 clear; clc; close all;
 x =[-155.2736 -158.0152];
-
+addpath(genpath(pwd))
 
 y =[ 19.5270 21.4226];
 
 [HawaiiDist,Hawaiiaz]= distance(y(1),x(1),y(2),x(2))
 
-Periodlist = [50 66.6667 80];
+Periodlist = [50 66.6667 ];
 Pcounter=0;
 for Period = Periodlist
 Pcounter=Pcounter+1;
@@ -62,11 +62,14 @@ end
 
 load coastlines
      figure(1)
-     subplot(1,3,Pcounter)
+     subplot(1,2,Pcounter)
      plot(coastlon,coastlat,'linewidth',2)
      hold on
        scatter(UniqueSLONS,UniqueSLATS,200,medianclist,'filled','MarkerEdgeColor','k','linewidth',2)
-       colormap(flipud(turbo))
+
+
+ cptcmap('roma.cpt','ncol',20)
+       
 barbar=colorbar;
 ylabel(barbar,'Phase Velocity (km/s)')
      xlim([-164 -148])
@@ -96,10 +99,13 @@ dlmwrite(['SuppData_LocalPhVels/Period_' num2str(Period) 's_Lon_Lat_LocalPhVel']
 
 clear WriteOut
 
+caxis([3.9 4.15])
+axis square
 
 end
-
-caxis([3.95 4.1])
+title('Period: \approx 67 s')
+caxis([3.9 4.15])
+axis square
 
  set(gcf,'position',[1513 387 1671 359])
- saveas(gcf,'FigS4_HawaiiPhVel.png')
+ saveas(gcf,'Fig4_HawaiiPhVel.png')

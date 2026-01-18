@@ -5,7 +5,8 @@ CleanupOldAAFiles
 clear; clc; close all;
 
 %PeriodList = [50 66.6667 80];
-PeriodList = [50 66.6667 80];
+%PeriodList = [50 66.6667 80];
+PeriodList = [28.5714];
 
 NewDatFolder =        '/Users/ananthariharan/Documents/GitHub/PLUME_ArrivalAnglePaper_Analysis_Replicator/RawData/';
 
